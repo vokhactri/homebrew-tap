@@ -6,6 +6,7 @@ My personal Homebrew tap for macOS.
 | --- | --- | --- |
 | [`netbird`](https://github.com/netbirdio/netbird) | formula | NetBird CLI and daemon |
 | [`netbird-ui`](https://github.com/netbirdio/netbird) | cask | NetBird menu bar app |
+| [`zshellcheck`](https://github.com/afadesigns/zshellcheck) | formula | Linter for Zsh scripts |
 
 ## Install
 

@@ -11,89 +11,33 @@ permissions:
 jobs:
   bump:
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v7
 
-      - name: Configure git
+      - run: |
+          echo "BUMP_DIR=$RUNNER_TEMP/bumps" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/bumps"
+
+      # Each script edits its own files and leaves committing to the next step,
+      # so the parallel steps never race for the git index.
+      - parallel:
+          - name: Bump netbird
+            run: .github/scripts/bump-netbird.sh
+
+          - name: Bump zshellcheck
+            run: .github/scripts/bump-zshellcheck.sh
+
+      - name: Commit and push
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-      - name: Update netbird cask to the latest release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          cask=Casks/netbird-ui.rb
-          latest=$(gh api repos/netbirdio/netbird/releases/latest --jq .tag_name)
-          latest=${latest#v}
-          current=$(sed -nE 's/^  version "([^"]+)"$/\1/p' "$cask")
-          if [ "$latest" = "$current" ]; then
-            echo "Already at $current"
-            exit 0
-          fi
-
-          base="https://github.com/netbirdio/netbird/releases/download/v$latest"
-          declare -A sha
-          for asset in netbird-ui_${latest}_darwin_{arm64,amd64}_signed.zip netbird_${latest}_darwin_{arm64,amd64}.tar.gz; do
-            # Release assets can show up a while after the tag. Try again on the next run.
-            if ! curl -fsSL -o asset "$base/$asset"; then
-              echo "$asset is not published yet"
-              exit 0
-            fi
-            sha[$asset]=$(sha256sum asset | cut -d' ' -f1)
-            rm -f asset
+          shopt -s nullglob
+          for record in "$BUMP_DIR"/*; do
+            mapfile -t lines < "$record"
+            git add -- "${lines[@]:1}"
+            git commit -m "${lines[0]}"
           done
-
-          sed -i -E \
-            -e "s/^  version \"[^\"]+\"$/  version \"$latest\"/" \
-            -e "s/(arm: +\")[0-9a-f]{64}/\1${sha[netbird-ui_${latest}_darwin_arm64_signed.zip]}/" \
-            -e "s/(intel: \")[0-9a-f]{64}/\1${sha[netbird-ui_${latest}_darwin_amd64_signed.zip]}/" \
-            "$cask"
-
-          # The formula has literal URLs, each followed by its sha256 line.
-          formula=Formula/netbird.rb
-          sed -i -E "s/${current//./\\.}/$latest/g" "$formula"
-          for arch in arm64 amd64; do
-            asset="netbird_${latest}_darwin_${arch}.tar.gz"
-            sed -i -E "/\/${asset//./\\.}\"/{n;s/[0-9a-f]{64}/${sha[$asset]}/}" "$formula"
-          done
-          git diff
-          git commit -am "chore: bump netbird to $latest"
-
-      - name: Update zshellcheck formula
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          formula=Formula/zshellcheck.rb
-          repo=afadesigns/zshellcheck
-          latest=$(gh api repos/$repo/releases/latest --jq .tag_name)
-          latest=${latest#v}
-          current=$(sed -nE 's|.*/releases/download/v([^/]+)/.*|\1|p' "$formula" | head -1)
-          if [ "$latest" = "$current" ]; then
-            echo "Already at $current"
-            exit 0
-          fi
-
-          # The release publishes checksums.txt with a sha256 for every asset.
-          if ! checksums=$(curl -fsSL "https://github.com/$repo/releases/download/v$latest/checksums.txt"); then
-            echo "checksums.txt is not published yet"
-            exit 0
-          fi
-          sed -i -E "s|/v${current//./\\.}/|/v$latest/|g" "$formula"
-          for arch in arm64 x86_64; do
-            asset="zshellcheck_Darwin_${arch}.tar.gz"
-            sha=$(awk -v a="$asset" '$2 == a { print $1 }' <<<"$checksums")
-            if [ -z "$sha" ]; then
-              echo "$asset is not published yet"
-              git checkout -- "$formula"
-              exit 0
-            fi
-            sed -i -E "/\/${asset//./\\.}\"/{n;s/[0-9a-f]{64}/$sha/}" "$formula"
-          done
-          git diff
-          git commit -am "chore: bump zshellcheck to $latest"
-
-      - name: Push
-        run: git push
+          git diff --quiet origin/main HEAD || git push

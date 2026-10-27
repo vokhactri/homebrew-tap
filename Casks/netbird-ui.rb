@@ -20,11 +20,20 @@ cask "netbird-ui" do
 
   app "netbird_ui_darwin", target: "Netbird UI.app"
 
-  # The release zip ships installer.sh as 0644. Upstream chmods it inside the
-  # signed bundle, which can fail with "Operation not permitted". Running it
-  # through /bin/sh needs no chmod.
+  # Do what upstream's installer.sh does without running it. The script always
+  # calls `netbird service stop` and `netbird service uninstall` and lets their
+  # stderr through. On upgrade, uninstall_preflight_steps has already removed
+  # the service, so both print launchctl errors even though nothing failed.
   postflight_steps do
-    run "/bin/sh", args: ["{{appdir}}/Netbird UI.app/installer.sh", version], sudo: true
+    run "/usr/bin/osascript", args: ["-e", 'quit app "Netbird UI"'],
+        sudo: true, must_succeed: false, print_stderr: false
+    run "{{HOMEBREW_PREFIX}}/bin/netbird", args: ["service", "stop"],
+        sudo: true, must_succeed: false, print_stderr: false
+    run "{{HOMEBREW_PREFIX}}/bin/netbird", args: ["service", "uninstall"],
+        sudo: true, must_succeed: false, print_stderr: false
+    run "{{HOMEBREW_PREFIX}}/bin/netbird", args: ["service", "install"], sudo: true
+    run "{{HOMEBREW_PREFIX}}/bin/netbird", args: ["service", "start"], sudo: true
+    run "/usr/bin/open", args: ["{{appdir}}/Netbird UI.app"], sudo: true, must_succeed: false
   end
 
   # bootout returns before launchd has removed system/netbird. On upgrade the

@@ -4,11 +4,11 @@ class Netbird < Formula
   license "BSD-3-Clause"
 
   if Hardware::CPU.arm?
-    url "https://github.com/netbirdio/netbird/releases/download/v0.81.5/netbird_0.81.5_darwin_arm64.tar.gz"
-    sha256 "2b1d8fcc3ebd15d9b656b7274dada546780d9c6a55077489844b8a47a605764a"
+    url "https://github.com/netbirdio/netbird/releases/download/v0.82.0/netbird_0.82.0_darwin_arm64.tar.gz"
+    sha256 "a46b84c962ac1f47a822d91cb2480bb892f01ee5d74fd2504b6106ceac5f0f87"
   else
-    url "https://github.com/netbirdio/netbird/releases/download/v0.81.5/netbird_0.81.5_darwin_amd64.tar.gz"
-    sha256 "302beac4ee0b0f1de8207bf0c02fa8da77449c260147836420b06804bb28db4d"
+    url "https://github.com/netbirdio/netbird/releases/download/v0.82.0/netbird_0.82.0_darwin_amd64.tar.gz"
+    sha256 "ee8aadb88419d65af1fd7c68b718f792ce51e912491e13f548b1cf6dc60a11e6"
   end
 
   livecheck do

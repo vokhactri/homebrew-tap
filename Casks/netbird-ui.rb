@@ -1,9 +1,9 @@
 cask "netbird-ui" do
   arch arm: "arm64", intel: "amd64"
 
-  version "0.81.5"
-  sha256 arm:   "ac05adecd6b1d1cc9ae2b072f4ec1f0cdfe66fc4837c746960f5a15fc39b4f73",
-         intel: "2efe2ff1546473ea17a3d82a20ac990762733414bce3aab1beef66cf23c40683"
+  version "0.82.0"
+  sha256 arm:   "919cbb6abdfa90d52b19b9412581313f97daddd0129fac1a5c8a0c4a28d40c86",
+         intel: "34cb2589672d46f969817dc9c9b886cd6ddda0c8083f18b4a4b3e1c2e48ae498"
 
   url "https://github.com/netbirdio/netbird/releases/download/v#{version}/netbird-ui_#{version}_darwin_#{arch}_signed.zip"
   name "Netbird UI"
